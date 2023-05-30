@@ -19,45 +19,24 @@ class FileEncryptor:
             self.key = key_file.read()
         self.fernet = Fernet(self.key)
 
-    def encrypt_file(self, filename):
+    def process_file(self, filename, mode):
         if self.fernet is None:
             print("Anahtar yüklenemedi. Lütfen önce anahtarı yükleyin.")
             return
-        encrypted_data = b""
         progress_bar = tqdm(total=os.path.getsize(filename),
-                            unit="B", unit_scale=True, desc="Encrypting")
+                            unit="B", unit_scale=True, desc=mode.capitalize() + "ing")
         try:
             with open(filename, "rb") as file:
-                for chunk in iter(lambda: file.read(4096), b""):
-                    encrypted_data += self.fernet.encrypt(chunk)
-                    progress_bar.update(len(chunk))
+                data = file.read()
+            processed_data = getattr(self.fernet, mode)(data)
+            with open(filename, "wb") as processed_file:
+                processed_file.write(processed_data)
+            progress_bar.update(len(data))
+            progress_bar.close()
+            print("Dosya başarıyla", mode + "lendi.")
         except KeyboardInterrupt:
-            print("\nŞifreleme iptal edildi.")
-            return
-        progress_bar.close()
-        with open(filename, "wb") as encrypted_file:
-            encrypted_file.write(encrypted_data)
-        print("Dosya başarıyla şifrelendi.")
-
-    def decrypt_file(self, filename):
-        if self.fernet is None:
-            print("Anahtar yüklenemedi. Lütfen önce anahtarı yükleyin.")
-            return
-        decrypted_data = b""
-        progress_bar = tqdm(total=os.path.getsize(filename),
-                            unit="B", unit_scale=True, desc="Decrypting")
-        try:
-            with open(filename, "rb") as encrypted_file:
-                for chunk in iter(lambda: encrypted_file.read(4096), b""):
-                    decrypted_data += self.fernet.decrypt(chunk)
-                    progress_bar.update(len(chunk))
-        except KeyboardInterrupt:
-            print("\nŞifre çözme iptal edildi.")
-            return
-        progress_bar.close()
-        with open(filename, "wb") as decrypted_file:
-            decrypted_file.write(decrypted_data)
-        print("Dosyanın şifresi başarıyla çözüldü.")
+            progress_bar.close()
+            print("\n", mode.capitalize(), "iptal edildi.")
 
     def delete_key(self):
         if os.path.exists(self.key_file):
@@ -87,11 +66,11 @@ while True:
     if choice == "1":
         dosya_adi = input(
             "Lütfen şifrelemek istediğiniz dosyanın adını girin: ")
-        file_encryptor.encrypt_file(dosya_adi)
+        file_encryptor.process_file(dosya_adi, "encrypt")
     elif choice == "2":
         dosya_adi = input(
             "Lütfen şifresini çözmek istediğiniz dosyanın adını girin: ")
-        file_encryptor.decrypt_file(dosya_adi)
+        file_encryptor.process_file(dosya_adi, "decrypt")
     elif choice == "3":
         file_encryptor.delete_key()
         file_encryptor.generate_key()
