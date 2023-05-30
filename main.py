@@ -1,6 +1,7 @@
 from cryptography.fernet import Fernet
 from tqdm import tqdm
 import os
+import time
 
 
 class FileEncryptor:
@@ -23,8 +24,10 @@ class FileEncryptor:
         if self.fernet is None:
             print("Anahtar yüklenemedi. Lütfen önce anahtarı yükleyin.")
             return
-        progress_bar = tqdm(total=os.path.getsize(filename),
-                            unit="B", unit_scale=True, desc=mode.capitalize() + "ing")
+        input_file_size = os.path.getsize(filename)
+        chunk_size = 64 * 1024  # 64 KB
+        progress_bar = tqdm(total=input_file_size, unit="B", unit_scale=True, desc=mode.capitalize() + "ing")
+        start_time = time.time()
         try:
             with open(filename, "rb") as file:
                 data = file.read()
@@ -33,7 +36,8 @@ class FileEncryptor:
                 processed_file.write(processed_data)
             progress_bar.update(len(data))
             progress_bar.close()
-            print("Dosya başarıyla", mode + "lendi.")
+            elapsed_time = time.time() - start_time
+            print("Dosya başarıyla", mode + "lendi. Toplam süre: {:.2f} saniye.".format(elapsed_time))
         except KeyboardInterrupt:
             progress_bar.close()
             print("\n", mode.capitalize(), "iptal edildi.")
@@ -64,12 +68,10 @@ while True:
     print("5. Çıkış")
     choice = input("Yapmak istediğiniz işlemi seçin (1/2/3/4/5): ")
     if choice == "1":
-        dosya_adi = input(
-            "Lütfen şifrelemek istediğiniz dosyanın adını girin: ")
+        dosya_adi = input("Lütfen şifrelemek istediğiniz dosyanın adını girin: ")
         file_encryptor.process_file(dosya_adi, "encrypt")
     elif choice == "2":
-        dosya_adi = input(
-            "Lütfen şifresini çözmek istediğiniz dosyanın adını girin: ")
+        dosya_adi = input("Lütfen şifresini çözmek istediğiniz dosyanın adını girin: ")
         file_encryptor.process_file(dosya_adi, "decrypt")
     elif choice == "3":
         file_encryptor.delete_key()
